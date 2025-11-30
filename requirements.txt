@@ -13,3 +13,4 @@ wikipedia
 ipykernel
 typing_extensions
 protobuf
+pypdf

@@ -57,7 +57,7 @@ def initialize_rag():
         urls = Config.DEFAULT_URLS
         
         # Process documents
-        documents = doc_processor.process_urls(urls)
+        documents = doc_processor.process_url(urls)
         
         # Create vector store
         vector_store.create_retriever(documents)

@@ -83,7 +83,7 @@ class RagNodes():
             "Return only the final useful answer."
         )
 
-        self._agent = create_agent(self.llm, tools=tools, prompt=system_prompt)
+        self._agent = create_agent(model=self.llm, tools=tools, system_prompt=system_prompt)
     
     def generate_answer(self, state: RagState) -> RagState:
         """
