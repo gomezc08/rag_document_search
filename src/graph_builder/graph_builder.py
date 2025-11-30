@@ -2,7 +2,7 @@
 
 from langgraph.graph import StateGraph, END
 from src.state.rag_state import RagState
-from src.nodes.nodes import RagNodes
+from src.nodes.reactnode import RagNodes
 
 class GraphBuilder():
     """Builds and manages LangGrapgh"""
