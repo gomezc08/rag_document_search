@@ -60,7 +60,7 @@ def initialize_rag():
         documents = doc_processor.process_urls(urls)
         
         # Create vector store
-        vector_store.create_vectorstore(documents)
+        vector_store.create_retriever(documents)
         
         # Build graph
         graph_builder = GraphBuilder(

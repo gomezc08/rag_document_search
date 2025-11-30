@@ -13,7 +13,7 @@ class VectorStore:
         self.vector_store = None
         self.retriever = None
     
-    def _create_retriever(self, documents:List[Document]):
+    def create_retriever(self, documents:List[Document]):
         """
         Creates vector store from documents
         
@@ -23,7 +23,7 @@ class VectorStore:
         self.vector_store = FAISS.from_documents(documents, self.embedding)
         self.retriever = self.vector_store.as_retriever()
     
-    def _get_retriever(self):
+    def get_retriever(self):
         """
         Get retriever instance
         
