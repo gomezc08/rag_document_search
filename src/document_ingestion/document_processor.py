@@ -71,11 +71,11 @@ class DocumentProcessor:
             # Case 2: PDF directory
             path = Path("data")
             if path.is_dir():
-                docs.extend(self._load_from_pdf_dir(path))
+                docs.extend(self._load_from_pdf_directory(path))
                 
             # Case 3: Text file 
             elif path.suffix.lower() == ".txt":
-                docs.extend(self.load_from_txt(path))
+                docs.extend(self._load_from_text(path))
             
             # Case 4: Unavailable source type
             else:

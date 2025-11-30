@@ -15,7 +15,7 @@ class GraphBuilder():
             retriever: doc retriever intstance
             llm: generator 
         """
-        self.nodes = RagNodes()
+        self.nodes = RagNodes(retriever, llm)
         self.graph = None
     
     def build(self):
