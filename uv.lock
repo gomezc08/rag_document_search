@@ -1811,6 +1811,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "requests" },
     { name = "streamlit" },
+    { name = "typing-extensions" },
     { name = "wikipedia" },
 ]
 
@@ -1828,6 +1829,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.2.1" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "streamlit", specifier = ">=1.51.0" },
+    { name = "typing-extensions", specifier = ">=4.15.0" },
     { name = "wikipedia", specifier = ">=1.4.0" },
 ]
 

@@ -11,3 +11,5 @@ requests
 streamlit
 wikipedia
 ipykernel
+typing_extensions
+protobuf
