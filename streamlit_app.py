@@ -4,6 +4,7 @@ import streamlit as st
 from pathlib import Path
 import sys
 import time
+from langgraph.checkpoint.memory import MemorySaver
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent))
@@ -12,6 +13,8 @@ from src.config.config import Config
 from src.document_ingestion.document_processor import DocumentProcessor
 from src.vector_store.vector_store import VectorStore
 from src.graph_builder.graph_builder import GraphBuilder
+
+checkpointer = MemorySaver()
 
 # Page configuration
 st.set_page_config(
@@ -62,12 +65,13 @@ def initialize_rag():
         # Create vector store
         vector_store.create_retriever(documents)
         
-        # Build graph
+        # Build graph with checkpointer
         graph_builder = GraphBuilder(
             retriever=vector_store.get_retriever(),
-            llm=llm
+            llm=llm,
+            checkpointer=checkpointer  # Pass checkpointer for agent memory
         )
-        graph_builder.build()
+        graph_builder.build(checkpointer)
         
         return graph_builder, len(documents)
     except Exception as e:
@@ -93,6 +97,12 @@ def main():
     
     st.markdown("---")
     
+    # Use session ID as thread_id to maintain conversation per session
+    if 'thread_id' not in st.session_state:
+        import uuid
+        st.session_state.thread_id = str(uuid.uuid4())
+    thread_id = st.session_state.thread_id
+    
     # Search interface
     with st.form("search_form"):
         question = st.text_input(
@@ -107,8 +117,8 @@ def main():
             with st.spinner("Searching..."):
                 start_time = time.time()
                 
-                # Get answer
-                result = st.session_state.rag_system.run(question)
+                # Get answer - use session thread_id for conversation continuity
+                result = st.session_state.rag_system.run(question, checkpointer, thread_id)
                 
                 elapsed_time = time.time() - start_time
                 

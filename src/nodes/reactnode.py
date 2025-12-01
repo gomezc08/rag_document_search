@@ -14,17 +14,19 @@ from langchain_community.tools.wikipedia.tool import WikipediaQueryRun
 
 class RagNodes():
     """Contains node functions for RAG workflow"""
-    def __init__(self, retriever, llm):
+    def __init__(self, retriever, llm, checkpointer=None):
         """
         Initializes RAG nodes
         
         Args:
             retriever: vector store instance
             llm: llm instance
+            checkpointer: optional checkpointer for agent memory
         """
         self.retriever = retriever
         self.llm = llm
         self._agent = None
+        self.checkpointer = checkpointer
         
     def retrieve_docs(self, state:RagState) -> RagState:
         """
@@ -39,7 +41,8 @@ class RagNodes():
         docs = self.retriever.invoke(state.question)
         return RagState(
             question = state.question,
-            retrieved_docs=docs
+            retrieved_docs=docs,
+            thread_id=state.thread_id
         ) 
     
     def _build_tools(self) -> List[Tool]:
@@ -83,17 +86,41 @@ class RagNodes():
             "Return only the final useful answer."
         )
 
-        self._agent = create_agent(model=self.llm, tools=tools, system_prompt=system_prompt)
+        # Pass checkpointer if available to enable conversation memory
+        if self.checkpointer:
+            self._agent = create_agent(
+                model=self.llm, 
+                tools=tools, 
+                system_prompt=system_prompt, 
+                checkpointer=self.checkpointer
+            )
+        else:
+            self._agent = create_agent(
+                model=self.llm, 
+                tools=tools, 
+                system_prompt=system_prompt
+            )
     
     def generate_answer(self, state: RagState) -> RagState:
         """
         Generate answer using ReAct agent with retriever + wikipedia.
+        The agent uses checkpointer to maintain conversation history.
         """
         if self._agent is None:
             self._build_agent()
         
-        result = self._agent.invoke({"messages": [HumanMessage(content=state.question)]})
+        # Prepare agent invocation with current question
+        agent_input = {"messages": [HumanMessage(content=state.question)]}
         
+        # Use checkpointer config if thread_id is available
+        # This allows the agent to remember previous conversation
+        if self.checkpointer and state.thread_id:
+            config = {"configurable": {"thread_id": f"agent_{state.thread_id}"}}
+            result = self._agent.invoke(agent_input, config=config)
+        else:
+            result = self._agent.invoke(agent_input)
+        
+        # Extract answer from agent response
         messages = result.get("messages", [])
         answer: Optional[str] = None
         if messages:
@@ -103,5 +130,6 @@ class RagNodes():
         return RagState(
             question=state.question,
             retrieved_docs=state.retrieved_docs,
-            answer=answer or "Could not generate answer."
+            answer=answer or "Could not generate answer.",
+            thread_id=state.thread_id
         )
