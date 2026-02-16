@@ -22,8 +22,10 @@ class Config:
     
     # Default URLs
     DEFAULT_URLS = [
-        "https://lilianweng.github.io/posts/2023-06-23-agent/",
-        "https://lilianweng.github.io/posts/2024-04-12-diffusion-video/"
+        "https://whitmanblues.com/sports/mens-soccer/roster/christian-gomez/5022",
+        "https://github.com/gomezc08",
+        "data/Profile.pdf",
+        "data",
     ]
     
     @classmethod

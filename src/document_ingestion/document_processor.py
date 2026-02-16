@@ -36,9 +36,9 @@ class DocumentProcessor:
         loader = PyPDFDirectoryLoader(directory)
         return loader.load()
     
-    def _load_from_pdf(self, file_path:Union[str, Path]) -> list[Document]:
-        """Load pdfs from file"""
-        loader = PyPDFDirectoryLoader(str("data"))
+    def _load_from_pdf(self, file_path: Union[str, Path]) -> list[Document]:
+        """Load a single PDF file"""
+        loader = PyPDFLoader(str(file_path))
         return loader.load()
     
     def _load_from_url(self, url:str) -> List[Document]:
@@ -46,9 +46,9 @@ class DocumentProcessor:
         loader = WebBaseLoader(url)
         return loader.load()
     
-    def _load_from_text(self, file_path:Union[str, Path]) -> list[Document]:
-        """Load pdfs from either directory or path"""
-        loader = TextLoader(str(file_path, encoding="utf-8"))
+    def _load_from_text(self, file_path: Union[str, Path]) -> list[Document]:
+        """Load text from a file"""
+        loader = TextLoader(str(file_path), encoding="utf-8")
         return loader.load()
     
     def _load_documents(self, sources:List[str]) -> List[Document]:
@@ -63,25 +63,26 @@ class DocumentProcessor:
         """
         docs: List[Document] = []
         for src in sources:
-            
             # Case 1: URL
             if src.startswith("http://") or src.startswith("https://"):
                 docs.extend(self._load_from_url(src))
-            
+                continue
+
+            path = Path(src)
             # Case 2: PDF directory
-            path = Path("data")
             if path.is_dir():
-                docs.extend(self._load_from_pdf_dir(path))
-                
-            # Case 3: Text file 
+                docs.extend(self._load_from_pdf_directory(path))
+            # Case 3: Single PDF file
+            elif path.suffix.lower() == ".pdf":
+                docs.extend(self._load_from_pdf(path))
+            # Case 4: Text file
             elif path.suffix.lower() == ".txt":
-                docs.extend(self.load_from_txt(path))
-            
-            # Case 4: Unavailable source type
+                docs.extend(self._load_from_text(path))
+            # Case 5: Unsupported
             else:
                 raise ValueError(
                     f"Unsupported source type: {src}. "
-                    "Use URL, .txt file, or PDF directory."
+                    "Use URL, .pdf/.txt file, or PDF directory path."
                 )
 
         return docs
