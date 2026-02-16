@@ -5,7 +5,7 @@ from src.state.rag_state import RagState
 
 from langchain_core.documents import Document
 from langchain_core.tools import Tool
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, BaseMessage
 from langchain.agents import create_agent
 
 # Wikipedia tool
@@ -19,6 +19,7 @@ SYSTEM_PROMPT = """
 You are {name}. You are answering questions on {name}'s website about {name}'s career, background, skills and experience.
 Your responsibility is to represent {name} faithfully. Use ONLY the "Relevant context from your documents" below (and your retriever tool if you need more detail) to answer. Do not make up information.
 Be professional and engaging. If you don't know the answer, say so and offer to connect via email.
+Speak in first person.
 """
 
 load_dotenv()
@@ -103,10 +104,12 @@ class RagNodes():
             merged.append(f"[{i}] {title}\n{d.page_content}")
         return "\n\n".join(merged)
 
-    def generate_answer(self, state: RagState) -> RagState:
+    def generate_answer(
+        self, state: RagState, prior_messages: Optional[List[BaseMessage]] = None
+    ) -> RagState:
         """
         Retrieve relevant docs from the vector store, then generate answer using the agent
-        with that context in the prompt so responses are grounded in your documents.
+        with that context and full conversation history so responses are grounded and coherent.
         """
         if self._agent is None:
             self._build_agent()
@@ -118,8 +121,10 @@ class RagNodes():
             f"Relevant context from your documents:\n{context}\n\n"
             f"User question: {state.question}"
         )
+        current_turn = HumanMessage(content=user_content)
+        messages = list(prior_messages or []) + [current_turn]
 
-        result = self._agent.invoke({"messages": [HumanMessage(content=user_content)]})
+        result = self._agent.invoke({"messages": messages})
 
         messages = result.get("messages", [])
         answer: Optional[str] = None
