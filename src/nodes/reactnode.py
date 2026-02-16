@@ -12,19 +12,32 @@ from langchain.agents import create_agent
 from langchain_community.utilities import WikipediaAPIWrapper
 from langchain_community.tools.wikipedia.tool import WikipediaQueryRun
 
+from dotenv import load_dotenv
+import os
+
+SYSTEM_PROMPT = """
+You are {name}. You are answering questions on {name}'s website about {name}'s career, background, skills and experience.
+Your responsibility is to represent {name} faithfully. Use ONLY the "Relevant context from your documents" below (and your retriever tool if you need more detail) to answer. Do not make up information.
+Be professional and engaging. If you don't know the answer, say so and offer to connect via email.
+"""
+
+load_dotenv()
+
 class RagNodes():
     """Contains node functions for RAG workflow"""
-    def __init__(self, retriever, llm):
+    def __init__(self, retriever, llm, name: Optional[str] = None):
         """
         Initializes RAG nodes
-        
+
         Args:
             retriever: vector store instance
             llm: llm instance
+            name: display name for the person (from .env NAME); passed explicitly so it is correct at runtime
         """
         self.retriever = retriever
         self.llm = llm
         self._agent = None
+        self.name = name or os.getenv("NAME") or "Assistant"
         
     def retrieve_docs(self, state:RagState) -> RagState:
         """
@@ -77,31 +90,45 @@ class RagNodes():
     def _build_agent(self):
         """ReAct agent with tools"""
         tools = self._build_tools()
-        system_prompt = (
-            "You are a helpful RAG agent. "
-            "Prefer 'retriever' for user-provided docs; use 'wikipedia' for general knowledge. "
-            "Return only the final useful answer."
-        )
-
-        self._agent = create_agent(self.llm, tools=tools, prompt=system_prompt)
+        self._agent = create_agent(self.llm, tools=tools, system_prompt=SYSTEM_PROMPT.format(name=self.name))
     
+    def _format_docs_as_context(self, docs: List[Document], max_docs: int = 8) -> str:
+        """Format retrieved documents as a single context string for the prompt."""
+        if not docs:
+            return "(No relevant documents found.)"
+        merged = []
+        for i, d in enumerate(docs[:max_docs], start=1):
+            meta = d.metadata if hasattr(d, "metadata") else {}
+            title = meta.get("title") or meta.get("source") or f"doc_{i}"
+            merged.append(f"[{i}] {title}\n{d.page_content}")
+        return "\n\n".join(merged)
+
     def generate_answer(self, state: RagState) -> RagState:
         """
-        Generate answer using ReAct agent with retriever + wikipedia.
+        Retrieve relevant docs from the vector store, then generate answer using the agent
+        with that context in the prompt so responses are grounded in your documents.
         """
         if self._agent is None:
             self._build_agent()
-        
-        result = self._agent.invoke({"messages": [HumanMessage(content=state.question)]})
-        
+
+        # RAG: retrieve docs for this question and inject into the user message
+        docs = self.retriever.invoke(state.question)
+        context = self._format_docs_as_context(docs)
+        user_content = (
+            f"Relevant context from your documents:\n{context}\n\n"
+            f"User question: {state.question}"
+        )
+
+        result = self._agent.invoke({"messages": [HumanMessage(content=user_content)]})
+
         messages = result.get("messages", [])
         answer: Optional[str] = None
         if messages:
             answer_msg = messages[-1]
             answer = getattr(answer_msg, "content", None)
-        
+
         return RagState(
             question=state.question,
-            retrieved_docs=state.retrieved_docs,
+            retrieved_docs=docs,
             answer=answer or "Could not generate answer."
         )
