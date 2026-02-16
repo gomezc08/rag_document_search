@@ -33,7 +33,7 @@ def main():
     )
 
     # create gradio interface
-    gr.ChatInterface(chat.chat).launch()
+    gr.ChatInterface(chat.chat, textbox=gr.Textbox(placeholder="Ask me a yes or no question", container=False, scale=7)).launch()
 
 if __name__ == "__main__":
     main()
